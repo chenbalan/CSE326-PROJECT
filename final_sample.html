@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Local Event Calendar - view, add and manage events month by month.">
+    <title>Local Event Calendar</title>
+
+    <style>
+        /* ===== UNIT III: CSS VARIABLES ===== */
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --accent-green: #3b5336;
+            --accent-hover: #4d6e46;
+            --text-color: #ffffff;
+            --text-muted: #b3b3b3;
+            --border-color: #333333;
+            --danger: #ff6b6b;
+            --success: #51cf66;
+            --highlight: #75e6da;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 1rem;
+            line-height: 1.5;
+            margin: 0;
+            padding: 1.25rem;
+        }
+
+        h1 { margin: 0; font-size: 1.5rem; }
+        h2 { margin-top: 0; font-size: 1.1rem; }
+
+        /* ===== Flexbox: header ===== */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .brand { display: flex; align-items: center; gap: 0.6rem; }
+        .auth-container { display: flex; align-items: center; gap: 0.6rem; }
+        #user-status { color: var(--text-muted); font-size: 0.9rem; }
+
+        /* ===== Buttons + transitions ===== */
+        .btn {
+            background-color: var(--accent-green);
+            color: white;
+            padding: 0.5rem 1rem;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: inline-block;
+            text-align: center;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        .btn:hover { background-color: var(--accent-hover); transform: translateY(-1px); }
+        .btn:focus-visible, .day:focus-visible { outline: 2px solid var(--highlight); outline-offset: 2px; }
+        .btn-outline { background-color: transparent; border-color: var(--border-color); }
+        .btn-small { padding: 0.2rem 0.6rem; font-size: 0.8rem; }
+
+        /* Attribute selector */
+        button[data-action="delete"] { background-color: #6b2b2b; }
+        button[data-action="delete"]:hover { background-color: #8a3a3a; }
+
+        /* ===== Modal (CSS checkbox technique) ===== */
+        .modal-toggle { display: none; }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.85);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .modal-toggle:checked + .modal-overlay { display: flex; }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 360px;
+            border: 1px solid var(--border-color);
+            position: relative;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 0.6rem;
+            right: 1rem;
+            font-size: 1.4rem;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .close-btn:hover { color: var(--text-color); }
+
+        /* ===== CSS animation ===== */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== Form styling ===== */
+        .form-group { margin-bottom: 1rem; }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.3rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        input, select {
+            width: 100%;
+            padding: 0.6rem;
+            background-color: #2a2a2a;
+            border: 1px solid var(--border-color);
+            color: white;
+            border-radius: 4px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        input::placeholder { color: #777; }
+        input:focus:invalid { border-color: var(--danger); }
+        input:focus:valid { border-color: var(--success); }
+        input[type="email"], input[type="password"] { letter-spacing: 0.5px; }
+
+        /* ===== Grid: page layout ===== */
+        .main-grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
+
+        @media (min-width: 900px) {
+            .main-grid { grid-template-columns: 2fr 1fr; }
+        }
+
+        .section-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .section-card h2 {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.6rem;
+        }
+
+        /* Pseudo-element */
+        .section-card h2::before { content: "\25B8  "; color: var(--highlight); }
+
+        /* ===== Calendar ===== */
+        .calendar-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.8rem;
+        }
+
+        .calendar-nav h2 { border: none; margin: 0; padding: 0; }
+        .calendar-nav h2::before { content: ""; }
+
+        .filter-bar { margin-bottom: 0.8rem; }
+        .filter-bar select { width: auto; }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+
+        .weekday {
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            padding: 0.3rem 0;
+        }
+
+        .day {
+            min-height: 5.2rem;
+            padding: 0.3rem;
+            background-color: #262626;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-color);
+            text-align: left;
+            vertical-align: top;
+            cursor: pointer;
+            overflow: hidden;
+            font-size: 0.8rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .day:hover { background-color: #333; }
+        .day.empty { background-color: transparent; border-color: transparent; cursor: default; }
+        .day.today { border-color: var(--highlight); }
+        .day.selected { background-color: #2f4a2b; }
+
+        .day-number { display: block; font-weight: bold; margin-bottom: 0.2rem; }
+
+        .chip {
+            display: block;
+            padding: 1px 4px;
+            margin-bottom: 2px;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            background-color: #444;
+        }
+
+        /* Attribute selectors for category colours */
+        .chip[data-category="Community"]   { background-color: #1b4332; }
+        .chip[data-category="Music & Art"] { background-color: #4a2b5a; }
+        .chip[data-category="Sports"]      { background-color: #5a3b1a; }
+        .chip[data-category="Education"]   { background-color: #1a3b5a; }
+
+        /* ===== Table ===== */
+        .table-wrapper { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        caption { text-align: left; color: var(--text-muted); padding-bottom: 0.5rem; font-size: 0.85rem; }
+        th, td { padding: 0.6rem; text-align: left; border-bottom: 1px solid var(--border-color); }
+        th { color: var(--text-muted); font-size: 0.85rem; }
+        tbody tr:nth-child(even) { background-color: #232323; }
+        tbody tr:hover { background-color: #2c2c2c; }
+
+        .status-badge { padding: 0.2rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
+        .status-approved { background-color: #1b4332; color: var(--highlight); }
+        .status-pending  { background-color: #463f1a; color: #f4d35e; }
+
+        /* ===== Metrics ===== */
+        .metrics-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
+        .metric-box { background-color: #2a2a2a; padding: 0.9rem; border-radius: 6px; text-align: center; }
+        .metric-value { font-size: 1.5rem; font-weight: bold; color: var(--highlight); }
+        .metric-label { font-size: 0.75rem; color: var(--text-muted); }
+
+        #message { min-height: 1.5em; margin: 0 0 1rem; font-weight: bold; }
+        .msg-error { color: var(--danger); }
+        .msg-ok { color: var(--success); }
+
+        footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        footer::after { content: " | Built with HTML, CSS and JavaScript"; }
+
+        /* ===== Responsive: small screens ===== */
+        @media (max-width: 600px) {
+            .day { min-height: 3.2rem; }
+            .chip { font-size: 0; height: 6px; padding: 0; }   /* chips become small bars */
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="brand">
+            <!-- UNIT I: SVG graphics -->
+            <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="16" rx="2" fill="#75e6da"/>
+                <rect x="3" y="5" width="18" height="4" fill="#3b5336"/>
+                <rect x="7" y="2" width="2" height="5" fill="#ffffff"/>
+                <rect x="15" y="2" width="2" height="5" fill="#ffffff"/>
+            </svg>
+            <h1>Local Event Calendar</h1>
+        </div>
+
+        <nav class="auth-container" aria-label="Account">
+            <span id="user-status">Not signed in</span>
+            <label for="login-modal-state" class="btn btn-outline" id="login-btn" tabindex="0">Login</label>
+            <label for="register-modal-state" class="btn" id="register-btn" tabindex="0">Register</label>
+            <button type="button" class="btn btn-outline" id="logout-btn" hidden>Logout</button>
+        </nav>
+    </header>
+
+    <!-- Login modal -->
+    <input type="checkbox" id="login-modal-state" class="modal-toggle">
+    <div class="modal-overlay" role="dialog" aria-labelledby="login-heading">
+        <div class="modal-content">
+            <label for="login-modal-state" class="close-btn" aria-label="Close login form">&times;</label>
+            <h2 id="login-heading">Account Sign In</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-email">Email Address</label>
+                    <input type="email" id="login-email" name="email" required placeholder="name@domain.com">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" name="password" required minlength="6">
+                </div>
+                <button type="submit" class="btn" style="width: 100%;">Sign In</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Register modal -->
+    <input type="checkbox" id="register-modal-state" class="modal-toggle">
+    <div class="modal-overlay" role="dialog" aria-labelledby="register-heading">
+        <div class="modal-content">
+            <label for="register-modal-state" class="close-btn" aria-label="Close register form">&times;</label>
+            <h2 id="register-heading">Create Account</h2>
+            <form id="register-form">
+                <div class="form-group">
+                    <label for="reg-name">Full Name</label>
+                    <input type="text" id="reg-name" name="fullname" required pattern="[A-Za-z\s]{3,}" placeholder="John Doe" title="Letters and spaces only, at least 3 characters">
+                </div>
+                <div class="form-group">
+                    <label for="reg-email">Email Address</label>
+                    <input type="email" id="reg-email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="reg-pass">Password</label>
+                    <input type="password" id="reg-pass" name="password" required minlength="8" placeholder="Min. 8 characters">
+                </div>
+                <button type="submit" class="btn" style="width: 100%;">Create Account</button>
+            </form>
+        </div>
+    </div>
+
+    <main>
+        <p id="message" role="status" aria-live="polite"></p>
+
+        <div class="main-grid">
+
+            <!-- LEFT: calendar + table -->
+            <div>
+                <section class="section-card" aria-labelledby="calendar-heading">
+                    <div class="calendar-nav">
+                        <button type="button" class="btn btn-outline" id="prev-month" aria-label="Previous month">&laquo; Prev</button>
+                        <h2 id="calendar-heading">Month Year</h2>
+                        <button type="button" class="btn btn-outline" id="next-month" aria-label="Next month">Next &raquo;</button>
+                    </div>
+
+                    <div class="filter-bar">
+                        <label for="category-filter">Show category:</label>
+                        <select id="category-filter">
+                            <option>All</option>
+                            <option>Community</option>
+                            <option>Music &amp; Art</option>
+                            <option>Sports</option>
+                            <option>Education</option>
+                        </select>
+                    </div>
+
+                    <div class="calendar-grid" id="calendar-grid"></div>
+                </section>
+
+                <section class="section-card" aria-labelledby="list-heading">
+                    <h2 id="list-heading">Events This Month</h2>
+                    <div class="table-wrapper">
+                        <table>
+                            <caption id="table-caption"></caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Title</th>
+                                    <th scope="col">Date</th>
+                                    <th scope="col">Category</th>
+                                    <th scope="col">Price</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="event-table-body"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- RIGHT: form + metrics -->
+            <aside>
+                <section class="section-card" aria-labelledby="create-heading">
+                    <h2 id="create-heading">Add New Event</h2>
+                    <form id="event-form">
+                        <div class="form-group">
+                            <label for="event-title">Event Title</label>
+                            <input type="text" id="event-title" name="title" required placeholder="e.g., Downtown Farmers Market">
+                        </div>
+                        <div class="form-group">
+                            <label for="event-date">Date (click a day to fill)</label>
+                            <input type="date" id="event-date" name="date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="event-category">Category</label>
+                            <select id="event-category" name="category">
+                                <option>Community</option>
+                                <option>Music &amp; Art</option>
+                                <option>Sports</option>
+                                <option>Education</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="event-price">Ticket Price (0 for free)</label>
+                            <input type="number" id="event-price" name="price" min="0" max="10000" step="0.5" value="0" required>
+                        </div>
+                        <button type="submit" class="btn">Add Event</button>
+                    </form>
+                </section>
+
+                <section class="section-card" aria-labelledby="stats-heading">
+                    <h2 id="stats-heading">Month Summary</h2>
+                    <div class="metrics-grid">
+                        <div class="metric-box"><div class="metric-value" id="stat-total">0</div><div class="metric-label">Events</div></div>
+                        <div class="metric-box"><div class="metric-value" id="stat-approved">0</div><div class="metric-label">Approved</div></div>
+                        <div class="metric-box"><div class="metric-value" id="stat-pending">0</div><div class="metric-label">Pending</div></div>
+                        <div class="metric-box"><div class="metric-value" id="stat-free">0</div><div class="metric-label">Free</div></div>
+                        <div class="metric-box"><div class="metric-value" id="stat-average">0.00</div><div class="metric-label">Avg. Price</div></div>
+                        <div class="metric-box"><div class="metric-value" id="stat-top">-</div><div class="metric-label">Top Category</div></div>
+                    </div>
+                </section>
+            </aside>
+
+        </div>
+    </main>
+
+    <footer>&copy; 2026 Local Event Calendar</footer>
+
+    <script>
+        /* =====================================================
+           UNIT IV: JAVASCRIPT FUNDAMENTALS
+           1. Variables and Constants    2. Data Types
+           3. Operators and Expressions  4. Strings and String Methods
+           5. Numbers and Boolean Values 6. Conditional Statements
+           7. Functions                  8. Scope
+           9. Arrays                     10. Objects
+           (A few DOM lines connect the code to the page; the Date
+           object is used once, only to know today's date and the
+           weekday on which a month starts.)
+           ===================================================== */
+
+        /* ---------- 1. VARIABLES AND CONSTANTS ---------- */
+        const MIN_PASSWORD_LENGTH = 8;
+        const MONTH_NAMES = ["January", "February", "March", "April", "May", "June",
+                             "July", "August", "September", "October", "November", "December"];
+        const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+        let today = new Date();
+        let todayString = "";                    // filled in below
+        let currentYear = today.getFullYear();
+        let currentMonth = today.getMonth();     // 0 = January ... 11 = December
+        let selectedDate = "";
+        let selectedCategory = "All";
+        let nextId = 4;
+        let loggedInUser = null;                 // null = nobody signed in
+
+        /* ---------- 2. DATA TYPES ---------- */
+        console.log(typeof currentYear);         // "number"
+        console.log(typeof MONTH_NAMES[0]);      // "string"
+        console.log(typeof loggedInUser);        // "object" (null)
+        console.log(Array.isArray(MONTH_NAMES)); // true
+
+        /* ---------- 9 + 10. ARRAYS AND OBJECTS ---------- */
+        let events = [
+            { id: 1, title: "Downtown Farmers Market", date: "2026-11-15", category: "Community",   price: 0,    status: "approved" },
+            { id: 2, title: "Jazz Night In The Park",   date: "2026-11-22", category: "Music & Art", price: 12.5, status: "approved" },
+            { id: 3, title: "City 5K Charity Run",      date: "2026-12-01", category: "Sports",      price: 5,    status: "pending"  }
+        ];
+
+        let users = [];
+
+        /* ---------- 3 + 5. OPERATORS, NUMBERS AND BOOLEANS ---------- */
+        // Leap year uses arithmetic (%), comparison and logical operators
+        function isLeapYear(year) {
+            return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+        }
+
+        function getDaysInMonth(year, month) {
+            if (month === 1 && isLeapYear(year)) {
+                return 29;
+            }
+            return DAYS_IN_MONTH[month];
+        }
+
+        function getFirstWeekday(year, month) {
+            return new Date(year, month, 1).getDay();    // 0 = Sunday
+        }
+
+        /* ---------- 4. STRINGS AND STRING METHODS ---------- */
+        function twoDigits(number) {
+            return String(number).padStart(2, "0");      // 5 -> "05"
+        }
+
+        function makeDateString(year, month, day) {
+            return year + "-" + twoDigits(month + 1) + "-" + twoDigits(day);
+        }
+
+        function formatTitle(text) {
+            let words = text.trim().split(" ");
+            let result = [];
+            for (let i = 0; i < words.length; i++) {
+                let word = words[i];
+                if (word.length > 0) {
+                    result.push(word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());
+                }
+            }
+            return result.join(" ");
+        }
+
+        function escapeText(text) {
+            return String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;");
+        }
+
+        function isValidEmail(email) {
+            return email.includes("@") && email.includes(".") && !email.startsWith("@");
+        }
+
+        todayString = makeDateString(today.getFullYear(), today.getMonth(), today.getDate());
+
+        function formatPrice(price) {
+            if (price === 0) {
+                return "Free";
+            }
+            return "Rs. " + price.toFixed(2);
+        }
+
+        function isValidPrice(value) {
+            let number = Number(value);
+            return !isNaN(number) && number >= 0;
+        }
+
+        /* ---------- 6. CONDITIONAL STATEMENTS ---------- */
+        function getStatusLabel(status) {
+            return status === "approved" ? "Approved" : "Pending";   // ternary
+        }
+
+        function getCategoryIcon(category) {
+            switch (category) {                                      // switch
+                case "Community":   return "\uD83E\uDD1D";
+                case "Music & Art": return "\uD83C\uDFB5";
+                case "Sports":      return "\u26BD";
+                case "Education":   return "\uD83D\uDCDA";
+                default:            return "\uD83D\uDCCD";
+            }
+        }
+
+        /* ---------- 7 + 8. FUNCTIONS AND SCOPE ---------- */
+        function showMessage(text, isError) {
+            let box = document.getElementById("message");            // local scope
+            box.textContent = text;
+            if (isError) {
+                box.className = "msg-error";
+            } else {
+                box.className = "msg-ok";
+            }
+        }
+
+        // Events of the month on screen, respecting the category filter
+        function getMonthEvents() {
+            let prefix = currentYear + "-" + twoDigits(currentMonth + 1);
+            let list = events.filter(function (item) {
+                let inMonth = item.date.startsWith(prefix);
+                let matches = selectedCategory === "All" || item.category === selectedCategory;
+                return inMonth && matches;
+            });
+            list.sort(function (a, b) {
+                if (a.date < b.date) { return -1; }
+                if (a.date > b.date) { return 1; }
+                return 0;
+            });
+            return list;
+        }
+
+        function getEventsOnDate(dateString) {
+            return getMonthEvents().filter(function (item) { return item.date === dateString; });
+        }
+
+        function renderCalendar() {
+            document.getElementById("calendar-heading").textContent =
+                MONTH_NAMES[currentMonth] + " " + currentYear;
+
+            let html = "";
+
+            // Weekday header row
+            for (let w = 0; w < WEEKDAY_NAMES.length; w++) {
+                html += "<div class=\"weekday\">" + WEEKDAY_NAMES[w] + "</div>";
+            }
+
+            // Empty cells before the 1st of the month
+            let blanks = getFirstWeekday(currentYear, currentMonth);
+            for (let b = 0; b < blanks; b++) {
+                html += "<div class=\"day empty\"></div>";
+            }
+
+            // One cell per day
+            let totalDays = getDaysInMonth(currentYear, currentMonth);
+            for (let day = 1; day <= totalDays; day++) {
+                let dateString = makeDateString(currentYear, currentMonth, day);
+                let dayEvents = getEventsOnDate(dateString);
+
+                let classes = "day";
+                if (dateString === todayString) { classes += " today"; }
+                if (dateString === selectedDate) { classes += " selected"; }
+
+                let label = day + " " + MONTH_NAMES[currentMonth] + ", " + dayEvents.length + " events";
+                html += "<button type=\"button\" class=\"" + classes + "\" data-date=\"" + dateString + "\" aria-label=\"" + label + "\">";
+                html += "<span class=\"day-number\">" + day + "</span>";
+
+                for (let i = 0; i < dayEvents.length; i++) {
+                    html += "<span class=\"chip\" data-category=\"" + escapeText(dayEvents[i].category) + "\">" +
+                            escapeText(dayEvents[i].title) + "</span>";
+                }
+                html += "</button>";
+            }
+
+            document.getElementById("calendar-grid").innerHTML = html;
+        }
+
+        function renderTable() {
+            let list = getMonthEvents();
+            let rows = "";
+
+            for (let i = 0; i < list.length; i++) {
+                let item = list[i];
+                let nextAction = item.status === "approved" ? "Mark Pending" : "Approve";
+                rows += "<tr>" +
+                    "<td>" + escapeText(item.title) + "</td>" +
+                    "<td>" + escapeText(item.date) + "</td>" +
+                    "<td>" + getCategoryIcon(item.category) + " " + escapeText(item.category) + "</td>" +
+                    "<td>" + formatPrice(item.price) + "</td>" +
+                    "<td><span class=\"status-badge status-" + item.status + "\">" + getStatusLabel(item.status) + "</span></td>" +
+                    "<td>" +
+                        "<button type=\"button\" class=\"btn btn-small\" data-action=\"toggle\" data-id=\"" + item.id + "\">" + nextAction + "</button> " +
+                        "<button type=\"button\" class=\"btn btn-small\" data-action=\"delete\" data-id=\"" + item.id + "\">Delete</button>" +
+                    "</td></tr>";
+            }
+
+            if (list.length === 0) {
+                rows = "<tr><td colspan=\"6\">No events this month.</td></tr>";
+            }
+
+            document.getElementById("event-table-body").innerHTML = rows;
+            document.getElementById("table-caption").textContent =
+                list.length + " event(s) in " + MONTH_NAMES[currentMonth] + " " + currentYear;
+        }
+
+        function renderStats() {
+            let list = getMonthEvents();
+            let total = list.length;
+            let approved = list.filter(function (e) { return e.status === "approved"; }).length;
+            let free = list.filter(function (e) { return e.price === 0; }).length;
+            let sum = list.reduce(function (running, e) { return running + e.price; }, 0);
+            let average = total > 0 ? sum / total : 0;
+
+            // Count events per category with an object
+            let counts = {};
+            list.forEach(function (e) {
+                counts[e.category] = (counts[e.category] || 0) + 1;
+            });
+
+            let topCategory = "-";
+            let highest = 0;
+            let names = Object.keys(counts);
+            for (let i = 0; i < names.length; i++) {
+                if (counts[names[i]] > highest) {
+                    highest = counts[names[i]];
+                    topCategory = names[i];
+                }
+            }
+
+            document.getElementById("stat-total").textContent = total;
+            document.getElementById("stat-approved").textContent = approved;
+            document.getElementById("stat-pending").textContent = total - approved;
+            document.getElementById("stat-free").textContent = free;
+            document.getElementById("stat-average").textContent = average.toFixed(2);
+            document.getElementById("stat-top").textContent = topCategory;
+        }
+
+        function refreshPage() {
+            renderCalendar();
+            renderTable();
+            renderStats();
+        }
+
+        function changeMonth(step) {
+            currentMonth = currentMonth + step;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            } else if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            refreshPage();
+        }
+
+        /* ---------- CRUD FUNCTIONS ---------- */
+        function addEvent(title, date, category, price) {
+            let newEvent = {
+                id: nextId,
+                title: formatTitle(title),
+                date: date,
+                category: category,
+                price: Number(price),
+                status: "pending"
+            };
+            nextId++;
+            events.push(newEvent);
+        }
+
+        function toggleStatus(id) {
+            let found = events.find(function (e) { return e.id === id; });
+            if (found) {
+                found.status = found.status === "approved" ? "pending" : "approved";
+            }
+        }
+
+        function deleteEvent(id) {
+            let index = events.findIndex(function (e) { return e.id === id; });
+            if (index !== -1) {
+                events.splice(index, 1);
+            }
+        }
+
+        /* ---------- AUTH FUNCTIONS ---------- */
+        function updateAuthUI() {
+            let isLoggedIn = loggedInUser !== null;
+            document.getElementById("user-status").textContent =
+                isLoggedIn ? "Hello, " + loggedInUser.fullname : "Not signed in";
+            document.getElementById("login-btn").hidden = isLoggedIn;
+            document.getElementById("register-btn").hidden = isLoggedIn;
+            document.getElementById("logout-btn").hidden = !isLoggedIn;
+        }
+
+        function registerUser(fullname, email, password) {
+            if (password.length < MIN_PASSWORD_LENGTH) {
+                return "Password must be at least " + MIN_PASSWORD_LENGTH + " characters.";
+            }
+            if (!isValidEmail(email)) {
+                return "Please enter a valid email address.";
+            }
+            let exists = users.some(function (u) { return u.email === email.toLowerCase(); });
+            if (exists) {
+                return "That email is already registered.";
+            }
+            users.push({ fullname: formatTitle(fullname), email: email.toLowerCase(), password: password });
+            return "";
+        }
+
+        function loginUser(email, password) {
+            let found = users.find(function (u) {
+                return u.email === email.toLowerCase() && u.password === password;
+            });
+            if (!found) {
+                return false;
+            }
+            loggedInUser = Object.assign({}, found);   // copy the object
+            delete loggedInUser.password;              // remove the password from the session copy
+            return true;
+        }
+
+        /* ---------- CONNECT FUNCTIONS TO THE PAGE ---------- */
+        document.getElementById("prev-month").addEventListener("click", function () { changeMonth(-1); });
+        document.getElementById("next-month").addEventListener("click", function () { changeMonth(1); });
+
+        document.getElementById("category-filter").addEventListener("change", function (event) {
+            selectedCategory = event.target.value;
+            refreshPage();
+        });
+
+        // Click on a day: select it and fill the date field
+        document.getElementById("calendar-grid").addEventListener("click", function (event) {
+            let cell = event.target.closest("button.day");
+            if (cell === null) {
+                return;
+            }
+            selectedDate = cell.getAttribute("data-date");
+            document.getElementById("event-date").value = selectedDate;
+            refreshPage();
+        });
+
+        document.getElementById("register-form").addEventListener("submit", function (event) {
+            event.preventDefault();
+            let error = registerUser(
+                document.getElementById("reg-name").value,
+                document.getElementById("reg-email").value,
+                document.getElementById("reg-pass").value
+            );
+            if (error !== "") {
+                showMessage(error, true);
+            } else {
+                showMessage("Account created. You can sign in now.", false);
+                document.getElementById("register-form").reset();
+                document.getElementById("register-modal-state").checked = false;
+            }
+        });
+
+        document.getElementById("login-form").addEventListener("submit", function (event) {
+            event.preventDefault();
+            let ok = loginUser(
+                document.getElementById("login-email").value,
+                document.getElementById("login-password").value
+            );
+            if (ok) {
+                showMessage("Welcome back, " + loggedInUser.fullname + "!", false);
+                document.getElementById("login-form").reset();
+                document.getElementById("login-modal-state").checked = false;
+                updateAuthUI();
+            } else {
+                showMessage("Wrong email or password. Register first if you are new.", true);
+            }
+        });
+
+        document.getElementById("logout-btn").addEventListener("click", function () {
+            loggedInUser = null;
+            updateAuthUI();
+            showMessage("You have been signed out.", false);
+        });
+
+        document.getElementById("event-form").addEventListener("submit", function (event) {
+            event.preventDefault();
+
+            if (loggedInUser === null) {
+                showMessage("Please log in before adding an event.", true);
+                return;
+            }
+
+            let title = document.getElementById("event-title").value;
+            let date = document.getElementById("event-date").value;
+            let category = document.getElementById("event-category").value;
+            let price = document.getElementById("event-price").value;
+
+            if (title.trim().length < 3) {
+                showMessage("Event title must have at least 3 characters.", true);
+            } else if (!isValidPrice(price)) {
+                showMessage("Price must be a number of 0 or more.", true);
+            } else {
+                addEvent(title, date, category, price);
+
+                // Jump to the month of the new event so the user can see it
+                currentYear = Number(date.slice(0, 4));
+                currentMonth = Number(date.slice(5, 7)) - 1;
+                selectedDate = date;
+
+                showMessage("Event added and waiting for approval.", false);
+                document.getElementById("event-form").reset();
+                refreshPage();
+            }
+        });
+
+        document.getElementById("event-table-body").addEventListener("click", function (event) {
+            let action = event.target.getAttribute("data-action");
+            if (action === null) {
+                return;
+            }
+            if (loggedInUser === null) {
+                showMessage("Please log in to change events.", true);
+                return;
+            }
+
+            let id = Number(event.target.getAttribute("data-id"));
+            if (action === "delete") {
+                deleteEvent(id);
+                showMessage("Event deleted.", false);
+            } else if (action === "toggle") {
+                toggleStatus(id);
+                showMessage("Event status updated.", false);
+            }
+            refreshPage();
+        });
+
+        // First display
+        refreshPage();
+        updateAuthUI();
+    </script>
+</body>
+</html> 
