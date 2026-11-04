@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Event Calendar Application Prototype</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --accent-green: #3b5336;
+            --text-color: #ffffff;
+            --text-muted: #b3b3b3;
+            --border-color: #333333;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 24px;
+            color: var(--text-color);
+        }
+
+        .auth-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        /* --- Pure HTML Modal Toggle Mechanism (No JavaScript) --- */
+        .modal-toggle {
+            display: none;
+        }
+
+        .btn {
+            background-color: var(--accent-green);
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Displays the modal when the corresponding hidden checkbox is ticked */
+        .modal-toggle:checked + .modal-overlay {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            padding: 25px;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 360px;
+            border: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 20px;
+            color: var(--text-muted);
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        /* --- Forms Styling --- */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            background-color: #2a2a2a;
+            border: 1px solid var(--border-color);
+            color: white;
+            border-radius: 4px;
+        }
+
+        /* --- Dashboard Grid & Layout Features --- */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .main-grid {
+                grid-template-columns: 2fr 1fr;
+            }
+        }
+
+        .section-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            margin-top: 0;
+            font-size: 18px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* --- Search & Filter / CRUD Controls --- */
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-bar input, .filter-bar select {
+            padding: 6px 12px;
+            background-color: #2a2a2a;
+            border: 1px solid var(--border-color);
+            color: white;
+            border-radius: 4px;
+        }
+
+        /* --- List / Status Tracking --- */
+        .event-item {
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-approved { background-color: #1b4332; color: #75e6da; }
+        .status-pending { background-color: #463f1a; color: #f4d35e; }
+
+        /* --- Admin Dashboard / Reporting Metrics --- */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .metric-box {
+            background-color: #2a2a2a;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--accent-green);
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header & User Registration / Login Features -->
+    <header>
+        <h1>📍 Local Event Hub</h1>
+        <div class="auth-container">
+            <!-- Toggles using pure HTML checkbox hack instead of JS -->
+            <label for="login-modal-state" class="btn btn-outline">Login</label>
+            <label for="register-modal-state" class="btn">Register</label>
+        </div>
+    </header>
+
+    <!-- Hidden triggers for modals -->
+    <input type="checkbox" id="login-modal-state" class="modal-toggle">
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <label for="login-modal-state" class="close-btn">&times;</label>
+            <h3>Account Sign In</h3>
+            <form action="#" method="POST">
+                <div class="form-group">
+                    <label for="login-email">Email Address</label>
+                    <input type="email" id="login-email" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                <button type="submit" class="btn" style="width: 100%;">Sign In</button>
+            </form>
+        </div>
+    </div>
+
+    <input type="checkbox" id="register-modal-state" class="modal-toggle">
+    <div class="modal-overlay">
+        <div class="modal-content">
+            <label for="register-modal-state" class="close-btn">&times;</label>
+            <h3>Create Account</h3>
+            <form action="#" method="POST">
+                <div class="form-group">
+                    <label for="reg-name">Full Name</label>
+                    <input type="text" id="reg-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="reg-email">Email Address</label>
+                    <input type="email" id="reg-email" required>
+                </div>
+                <div class="form-group">
+                    <label for="reg-pass">Password</label>
+                    <input type="password" id="reg-pass" required minlength="8">
+                </div>
+                <button type="submit" class="btn" style="width: 100%;">Create Account</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Workspace Application UI -->
+    <main class="main-grid">
+        
+        <!-- Left Side: CRUD Workspace and Search Operations -->
+        <div>
+            <!-- CRUD: Add Core Record Form -->
+            <section class="section-card">
+                <h2 class="section-title">Create / Manage Event (CRUD)</h2>
+                <form action="#" method="POST">
+                    <div class="form-group">
+                        <label for="event-title">Event Title</label>
+                        <input type="text" id="event-title" placeholder="e.g., Downtown Farmers Market" required>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div class="form-group">
+                            <label for="event-date">Date</label>
+                            <input type="date" id="event-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="event-category">Category</label>
+                            <select id="event-category">
+                                <option>Community</option>
+                                <option>Music & Art</option>
+                                <option>Sports</option>
+                                <option>Education</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn">Submit Event Record</button>
+                </form>
+            </section>
+
+            <!-- Search & Filters Workspace Grid View -->
+            <section class="section-card">
+                <h2 class="section-title">Active Database Records</h2>
+                
+                <div class="filter-bar">
