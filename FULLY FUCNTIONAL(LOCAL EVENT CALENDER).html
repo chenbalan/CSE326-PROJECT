@@ -3,25 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Local Event Calendar - view, add and manage events month by month.">
+    <meta name="description" content="Local Event Calendar - view, add, edit and manage events month by month.">
     <title>Local Event Calendar</title>
 
     <style>
-        /* ===== UNIT III: CSS VARIABLES ===== */
+        
         :root {
-            --bg-color: #121212;
-            --card-bg: #1e1e1e;
-            --accent-green: #3b5336;
-            --accent-hover: #4d6e46;
+            --bg-color: #0f1420;
+            --card-bg: #1a2030;
+            --accent-green: #2b4a7a;
+            --accent-hover: #3a63a0;
             --text-color: #ffffff;
-            --text-muted: #b3b3b3;
-            --border-color: #333333;
+            --text-muted: #aab4c8;
+            --border-color: #2c3550;
             --danger: #ff6b6b;
             --success: #51cf66;
-            --highlight: #75e6da;
+            --highlight: #7ab8ff;
+            --field-bg: #232b3d;
+            --day-bg: #232b3d;
+            --day-hover: #2e384f;
+            --day-selected: #2a3f5f;
         }
 
         * { box-sizing: border-box; }
+
+        /* Makes the hidden attribute work even on elements with a display rule */
+        [hidden] { display: none !important; }
 
         body {
             background-color: var(--bg-color);
@@ -49,7 +56,7 @@
         }
 
         .brand { display: flex; align-items: center; gap: 0.6rem; }
-        .auth-container { display: flex; align-items: center; gap: 0.6rem; }
+        .auth-container { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
         #user-status { color: var(--text-muted); font-size: 0.9rem; }
 
         /* ===== Buttons + transitions ===== */
@@ -72,8 +79,8 @@
         .btn-small { padding: 0.2rem 0.6rem; font-size: 0.8rem; }
 
         /* Attribute selector */
-        button[data-action="delete"] { background-color: #6b2b2b; }
-        button[data-action="delete"]:hover { background-color: #8a3a3a; }
+        button[data-action="delete"], button[data-action="remove-user"] { background-color: #6b2b2b; }
+        button[data-action="delete"]:hover, button[data-action="remove-user"]:hover { background-color: #8a3a3a; }
 
         /* ===== Modal (CSS checkbox technique) ===== */
         .modal-toggle { display: none; }
@@ -132,7 +139,7 @@
         input, select {
             width: 100%;
             padding: 0.6rem;
-            background-color: #2a2a2a;
+            background-color: var(--field-bg);
             border: 1px solid var(--border-color);
             color: white;
             border-radius: 4px;
@@ -140,10 +147,13 @@
             transition: border-color 0.3s ease;
         }
 
-        input::placeholder { color: #777; }
+        input::placeholder { color: #7a869f; }
         input:focus:invalid { border-color: var(--danger); }
         input:focus:valid { border-color: var(--success); }
+        input[readonly] { opacity: 0.6; cursor: not-allowed; }
         input[type="email"], input[type="password"] { letter-spacing: 0.5px; }
+
+        .form-buttons { display: flex; gap: 0.6rem; flex-wrap: wrap; }
 
         /* ===== Grid: page layout ===== */
         .main-grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
@@ -179,8 +189,17 @@
         .calendar-nav h2 { border: none; margin: 0; padding: 0; }
         .calendar-nav h2::before { content: ""; }
 
-        .filter-bar { margin-bottom: 0.8rem; }
+        /* Search + filter bar */
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            align-items: center;
+            margin-bottom: 0.8rem;
+        }
+
         .filter-bar select { width: auto; }
+        .filter-bar input[type="search"] { width: auto; flex: 1 1 10rem; min-width: 8rem; }
 
         .calendar-grid {
             display: grid;
@@ -198,7 +217,7 @@
         .day {
             min-height: 5.2rem;
             padding: 0.3rem;
-            background-color: #262626;
+            background-color: var(--day-bg);
             border: 1px solid var(--border-color);
             border-radius: 4px;
             color: var(--text-color);
@@ -210,10 +229,10 @@
             transition: background-color 0.3s ease;
         }
 
-        .day:hover { background-color: #333; }
+        .day:hover { background-color: var(--day-hover); }
         .day.empty { background-color: transparent; border-color: transparent; cursor: default; }
         .day.today { border-color: var(--highlight); }
-        .day.selected { background-color: #2f4a2b; }
+        .day.selected { background-color: var(--day-selected); }
 
         .day-number { display: block; font-weight: bold; margin-bottom: 0.2rem; }
 
@@ -230,10 +249,10 @@
         }
 
         /* Attribute selectors for category colours */
-        .chip[data-category="Community"]   { background-color: #1b4332; }
+        .chip[data-category="Community"]   { background-color: #1b4a6b; }
         .chip[data-category="Music & Art"] { background-color: #4a2b5a; }
         .chip[data-category="Sports"]      { background-color: #5a3b1a; }
-        .chip[data-category="Education"]   { background-color: #1a3b5a; }
+        .chip[data-category="Education"]   { background-color: #1a4a3b; }
 
         /* ===== Table ===== */
         .table-wrapper { overflow-x: auto; }
@@ -241,22 +260,42 @@
         caption { text-align: left; color: var(--text-muted); padding-bottom: 0.5rem; font-size: 0.85rem; }
         th, td { padding: 0.6rem; text-align: left; border-bottom: 1px solid var(--border-color); }
         th { color: var(--text-muted); font-size: 0.85rem; }
-        tbody tr:nth-child(even) { background-color: #232323; }
-        tbody tr:hover { background-color: #2c2c2c; }
+        tbody tr:nth-child(even) { background-color: #1f2638; }
+        tbody tr:hover { background-color: #28324a; }
+        td.actions { white-space: nowrap; }
 
         .status-badge { padding: 0.2rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
-        .status-approved { background-color: #1b4332; color: var(--highlight); }
+        .status-approved { background-color: #1b3a5c; color: var(--highlight); }
         .status-pending  { background-color: #463f1a; color: #f4d35e; }
+        .role-badge { padding: 0.1rem 0.5rem; border-radius: 12px; font-size: 0.75rem; background-color: #4a2b5a; }
 
         /* ===== Metrics ===== */
         .metrics-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
-        .metric-box { background-color: #2a2a2a; padding: 0.9rem; border-radius: 6px; text-align: center; }
+        .metric-box { background-color: var(--field-bg); padding: 0.9rem; border-radius: 6px; text-align: center; }
         .metric-value { font-size: 1.5rem; font-weight: bold; color: var(--highlight); }
         .metric-label { font-size: 0.75rem; color: var(--text-muted); }
 
-        #message { min-height: 1.5em; margin: 0 0 1rem; font-weight: bold; }
-        .msg-error { color: var(--danger); }
-        .msg-ok { color: var(--success); }
+        /* Message pops up at the top of the screen so it is always visible */
+        #message {
+            position: fixed;
+            top: 0.8rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2000;
+            max-width: 92vw;
+            margin: 0;
+            padding: 0.7rem 1.2rem;
+            font-weight: bold;
+            text-align: center;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+        }
+        #message:empty { display: none; }
+        .msg-error { color: var(--danger); border-color: var(--danger) !important; }
+        .msg-ok { color: var(--success); border-color: var(--success) !important; }
+        .hint { font-size: 0.8rem; color: var(--text-muted); margin: 0 0 1rem; }
 
         footer {
             text-align: center;
@@ -283,8 +322,8 @@
         <div class="brand">
             <!-- UNIT I: SVG graphics -->
             <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true">
-                <rect x="3" y="5" width="18" height="16" rx="2" fill="#75e6da"/>
-                <rect x="3" y="5" width="18" height="4" fill="#3b5336"/>
+                <rect x="3" y="5" width="18" height="16" rx="2" fill="#7ab8ff"/>
+                <rect x="3" y="5" width="18" height="4" fill="#2b4a7a"/>
                 <rect x="7" y="2" width="2" height="5" fill="#ffffff"/>
                 <rect x="15" y="2" width="2" height="5" fill="#ffffff"/>
             </svg>
@@ -295,6 +334,7 @@
             <span id="user-status">Not signed in</span>
             <label for="login-modal-state" class="btn btn-outline" id="login-btn" tabindex="0">Login</label>
             <label for="register-modal-state" class="btn" id="register-btn" tabindex="0">Register</label>
+            <label for="profile-modal-state" class="btn btn-outline" id="profile-btn" tabindex="0" hidden>Profile</label>
             <button type="button" class="btn btn-outline" id="logout-btn" hidden>Logout</button>
         </nav>
     </header>
@@ -305,6 +345,7 @@
         <div class="modal-content">
             <label for="login-modal-state" class="close-btn" aria-label="Close login form">&times;</label>
             <h2 id="login-heading">Account Sign In</h2>
+            <p class="hint">Demo admin: admin@events.com / admin1234</p>
             <form id="login-form">
                 <div class="form-group">
                     <label for="login-email">Email Address</label>
@@ -343,6 +384,34 @@
         </div>
     </div>
 
+    <!-- Profile modal -->
+    <input type="checkbox" id="profile-modal-state" class="modal-toggle">
+    <div class="modal-overlay" role="dialog" aria-labelledby="profile-heading">
+        <div class="modal-content">
+            <label for="profile-modal-state" class="close-btn" aria-label="Close profile form">&times;</label>
+            <h2 id="profile-heading">My Profile</h2>
+            <form id="profile-form">
+                <div class="form-group">
+                    <label for="prof-email">Email (cannot be changed)</label>
+                    <input type="email" id="prof-email" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="prof-role">Role</label>
+                    <input type="text" id="prof-role" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="prof-name">Full Name</label>
+                    <input type="text" id="prof-name" required pattern="[A-Za-z\s]{3,}" title="Letters and spaces only, at least 3 characters">
+                </div>
+                <div class="form-group">
+                    <label for="prof-pass">New Password (leave empty to keep current)</label>
+                    <input type="password" id="prof-pass" minlength="8" placeholder="Min. 8 characters">
+                </div>
+                <button type="submit" class="btn" style="width: 100%;">Save Profile</button>
+            </form>
+        </div>
+    </div>
+
     <main>
         <p id="message" role="status" aria-live="polite"></p>
 
@@ -358,13 +427,20 @@
                     </div>
 
                     <div class="filter-bar">
-                        <label for="category-filter">Show category:</label>
+                        <input type="search" id="search-box" placeholder="Search events by title" aria-label="Search events by title">
+                        <label for="category-filter">Category:</label>
                         <select id="category-filter">
                             <option>All</option>
                             <option>Community</option>
                             <option>Music &amp; Art</option>
                             <option>Sports</option>
                             <option>Education</option>
+                        </select>
+                        <label for="status-filter">Status:</label>
+                        <select id="status-filter">
+                            <option value="All">All</option>
+                            <option value="approved">Approved</option>
+                            <option value="pending">Pending</option>
                         </select>
                     </div>
 
@@ -392,7 +468,7 @@
                 </section>
             </div>
 
-            <!-- RIGHT: form + metrics -->
+            <!-- RIGHT: form + metrics + admin -->
             <aside>
                 <section class="section-card" aria-labelledby="create-heading">
                     <h2 id="create-heading">Add New Event</h2>
@@ -418,7 +494,10 @@
                             <label for="event-price">Ticket Price (0 for free)</label>
                             <input type="number" id="event-price" name="price" min="0" max="10000" step="0.5" value="0" required>
                         </div>
-                        <button type="submit" class="btn">Add Event</button>
+                        <div class="form-buttons">
+                            <button type="submit" class="btn" id="event-submit">Add Event</button>
+                            <button type="button" class="btn btn-outline" id="cancel-edit" hidden>Cancel</button>
+                        </div>
                     </form>
                 </section>
 
@@ -431,6 +510,25 @@
                         <div class="metric-box"><div class="metric-value" id="stat-free">0</div><div class="metric-label">Free</div></div>
                         <div class="metric-box"><div class="metric-value" id="stat-average">0.00</div><div class="metric-label">Avg. Price</div></div>
                         <div class="metric-box"><div class="metric-value" id="stat-top">-</div><div class="metric-label">Top Category</div></div>
+                    </div>
+                </section>
+
+                <!-- Admin only -->
+                <section class="section-card" id="admin-card" aria-labelledby="admin-heading" hidden>
+                    <h2 id="admin-heading">Admin Controls</h2>
+                    <p class="hint" id="admin-summary"></p>
+                    <div class="table-wrapper">
+                        <table>
+                            <caption>Registered users</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Name</th>
+                                    <th scope="col">Role</th>
+                                    <th scope="col">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="user-table-body"></tbody>
+                        </table>
                     </div>
                 </section>
             </aside>
@@ -448,13 +546,11 @@
            5. Numbers and Boolean Values 6. Conditional Statements
            7. Functions                  8. Scope
            9. Arrays                     10. Objects
-           (A few DOM lines connect the code to the page; the Date
-           object is used once, only to know today's date and the
-           weekday on which a month starts.)
            ===================================================== */
 
         /* ---------- 1. VARIABLES AND CONSTANTS ---------- */
         const MIN_PASSWORD_LENGTH = 8;
+        const ADMIN_EMAIL = "admin@events.com";
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June",
                              "July", "August", "September", "October", "November", "December"];
         const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -466,6 +562,9 @@
         let currentMonth = today.getMonth();     // 0 = January ... 11 = December
         let selectedDate = "";
         let selectedCategory = "All";
+        let selectedStatus = "All";
+        let searchText = "";
+        let editingId = null;                    // null = adding, number = editing that event
         let nextId = 4;
         let loggedInUser = null;                 // null = nobody signed in
 
@@ -477,15 +576,17 @@
 
         /* ---------- 9 + 10. ARRAYS AND OBJECTS ---------- */
         let events = [
-            { id: 1, title: "Downtown Farmers Market", date: "2026-11-15", category: "Community",   price: 0,    status: "approved" },
-            { id: 2, title: "Jazz Night In The Park",   date: "2026-11-22", category: "Music & Art", price: 12.5, status: "approved" },
-            { id: 3, title: "City 5K Charity Run",      date: "2026-12-01", category: "Sports",      price: 5,    status: "pending"  }
+            { id: 1, title: "Downtown Farmers Market", date: "2026-11-15", category: "Community",   price: 0,    status: "approved", owner: ADMIN_EMAIL },
+            { id: 2, title: "Jazz Night In The Park",   date: "2026-11-22", category: "Music & Art", price: 12.5, status: "approved", owner: ADMIN_EMAIL },
+            { id: 3, title: "City 5K Charity Run",      date: "2026-12-01", category: "Sports",      price: 5,    status: "pending",  owner: ADMIN_EMAIL }
         ];
 
-        let users = [];
+        // A ready-made admin account so the admin controls can be tested
+        let users = [
+            { fullname: "Site Admin", email: ADMIN_EMAIL, password: "admin1234", role: "admin" }
+        ];
 
         /* ---------- 3 + 5. OPERATORS, NUMBERS AND BOOLEANS ---------- */
-        // Leap year uses arithmetic (%), comparison and logical operators
         function isLeapYear(year) {
             return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
         }
@@ -563,7 +664,19 @@
             }
         }
 
+        /* ---------- PERMISSIONS (admin controls) ---------- */
+        function isAdmin() {
+            return loggedInUser !== null && loggedInUser.role === "admin";
+        }
+
+        // Admins can change any event; normal users only their own
+        function canModify(item) {
+            return loggedInUser !== null && (isAdmin() || item.owner === loggedInUser.email);
+        }
+
         /* ---------- 7 + 8. FUNCTIONS AND SCOPE ---------- */
+        let messageTimer = null;
+
         function showMessage(text, isError) {
             let box = document.getElementById("message");            // local scope
             box.textContent = text;
@@ -572,15 +685,21 @@
             } else {
                 box.className = "msg-ok";
             }
+            // Hide the message again after 4 seconds
+            clearTimeout(messageTimer);
+            messageTimer = setTimeout(function () { box.textContent = ""; }, 4000);
         }
 
-        // Events of the month on screen, respecting the category filter
+        // Events of the month on screen, respecting search and filters
         function getMonthEvents() {
             let prefix = currentYear + "-" + twoDigits(currentMonth + 1);
+            let query = searchText.trim().toLowerCase();
             let list = events.filter(function (item) {
                 let inMonth = item.date.startsWith(prefix);
-                let matches = selectedCategory === "All" || item.category === selectedCategory;
-                return inMonth && matches;
+                let matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
+                let matchesStatus = selectedStatus === "All" || item.status === selectedStatus;
+                let matchesSearch = query === "" || item.title.toLowerCase().includes(query);
+                return inMonth && matchesCategory && matchesStatus && matchesSearch;
             });
             list.sort(function (a, b) {
                 if (a.date < b.date) { return -1; }
@@ -641,21 +760,24 @@
 
             for (let i = 0; i < list.length; i++) {
                 let item = list[i];
+                // Buttons are always shown; permissions are checked when clicked
                 let nextAction = item.status === "approved" ? "Mark Pending" : "Approve";
+                let buttons =
+                    "<button type=\"button\" class=\"btn btn-small\" data-action=\"toggle\" data-id=\"" + item.id + "\">" + nextAction + "</button> " +
+                    "<button type=\"button\" class=\"btn btn-small\" data-action=\"edit\" data-id=\"" + item.id + "\">Edit</button> " +
+                    "<button type=\"button\" class=\"btn btn-small\" data-action=\"delete\" data-id=\"" + item.id + "\">Delete</button>";
+
                 rows += "<tr>" +
                     "<td>" + escapeText(item.title) + "</td>" +
                     "<td>" + escapeText(item.date) + "</td>" +
                     "<td>" + getCategoryIcon(item.category) + " " + escapeText(item.category) + "</td>" +
                     "<td>" + formatPrice(item.price) + "</td>" +
                     "<td><span class=\"status-badge status-" + item.status + "\">" + getStatusLabel(item.status) + "</span></td>" +
-                    "<td>" +
-                        "<button type=\"button\" class=\"btn btn-small\" data-action=\"toggle\" data-id=\"" + item.id + "\">" + nextAction + "</button> " +
-                        "<button type=\"button\" class=\"btn btn-small\" data-action=\"delete\" data-id=\"" + item.id + "\">Delete</button>" +
-                    "</td></tr>";
+                    "<td class=\"actions\">" + buttons + "</td></tr>";
             }
 
             if (list.length === 0) {
-                rows = "<tr><td colspan=\"6\">No events this month.</td></tr>";
+                rows = "<tr><td colspan=\"6\">No events found.</td></tr>";
             }
 
             document.getElementById("event-table-body").innerHTML = rows;
@@ -695,10 +817,41 @@
             document.getElementById("stat-top").textContent = topCategory;
         }
 
+        // Admin panel: only visible for admins
+        function renderAdmin() {
+            let card = document.getElementById("admin-card");
+            card.hidden = !isAdmin();
+            if (!isAdmin()) {
+                return;
+            }
+
+            let pendingTotal = events.filter(function (e) { return e.status === "pending"; }).length;
+            document.getElementById("admin-summary").textContent =
+                users.length + " user(s), " + events.length + " event(s) in total, " + pendingTotal + " waiting for approval.";
+
+            let rows = "";
+            for (let i = 0; i < users.length; i++) {
+                let u = users[i];
+                let actions = "-";
+                // The built-in admin and your own account cannot be changed here
+                if (u.email !== ADMIN_EMAIL && u.email !== loggedInUser.email) {
+                    let roleButton = u.role === "admin" ? "Make User" : "Make Admin";
+                    actions = "<button type=\"button\" class=\"btn btn-small\" data-action=\"toggle-role\" data-email=\"" + escapeText(u.email) + "\">" + roleButton + "</button> " +
+                              "<button type=\"button\" class=\"btn btn-small\" data-action=\"remove-user\" data-email=\"" + escapeText(u.email) + "\">Remove</button>";
+                }
+                rows += "<tr>" +
+                    "<td>" + escapeText(u.fullname) + "<br><small>" + escapeText(u.email) + "</small></td>" +
+                    "<td><span class=\"role-badge\">" + escapeText(u.role) + "</span></td>" +
+                    "<td class=\"actions\">" + actions + "</td></tr>";
+            }
+            document.getElementById("user-table-body").innerHTML = rows;
+        }
+
         function refreshPage() {
             renderCalendar();
             renderTable();
             renderStats();
+            renderAdmin();
         }
 
         function changeMonth(step) {
@@ -721,10 +874,27 @@
                 date: date,
                 category: category,
                 price: Number(price),
-                status: "pending"
+                // Admin events are approved straight away, others wait for approval
+                status: isAdmin() ? "approved" : "pending",
+                owner: loggedInUser.email
             };
             nextId++;
             events.push(newEvent);
+        }
+
+        function updateEvent(id, title, date, category, price) {
+            let found = events.find(function (e) { return e.id === id; });
+            if (!found) {
+                return;
+            }
+            found.title = formatTitle(title);
+            found.date = date;
+            found.category = category;
+            found.price = Number(price);
+            // A changed event from a normal user needs approval again
+            if (!isAdmin()) {
+                found.status = "pending";
+            }
         }
 
         function toggleStatus(id) {
@@ -741,13 +911,40 @@
             }
         }
 
+        /* ---------- EDIT MODE FOR THE EVENT FORM ---------- */
+        function startEdit(id) {
+            let found = events.find(function (e) { return e.id === id; });
+            if (!found) {
+                return;
+            }
+            editingId = id;
+            document.getElementById("event-title").value = found.title;
+            document.getElementById("event-date").value = found.date;
+            document.getElementById("event-category").value = found.category;
+            document.getElementById("event-price").value = found.price;
+            document.getElementById("create-heading").textContent = "Edit Event";
+            document.getElementById("event-submit").textContent = "Save Changes";
+            document.getElementById("cancel-edit").hidden = false;
+            document.getElementById("event-form").scrollIntoView({ behavior: "smooth", block: "center" });
+            document.getElementById("event-title").focus();
+        }
+
+        function stopEdit() {
+            editingId = null;
+            document.getElementById("event-form").reset();
+            document.getElementById("create-heading").textContent = "Add New Event";
+            document.getElementById("event-submit").textContent = "Add Event";
+            document.getElementById("cancel-edit").hidden = true;
+        }
+
         /* ---------- AUTH FUNCTIONS ---------- */
         function updateAuthUI() {
             let isLoggedIn = loggedInUser !== null;
             document.getElementById("user-status").textContent =
-                isLoggedIn ? "Hello, " + loggedInUser.fullname : "Not signed in";
+                isLoggedIn ? "Hello, " + loggedInUser.fullname + " (" + loggedInUser.role + ")" : "Not signed in";
             document.getElementById("login-btn").hidden = isLoggedIn;
             document.getElementById("register-btn").hidden = isLoggedIn;
+            document.getElementById("profile-btn").hidden = !isLoggedIn;
             document.getElementById("logout-btn").hidden = !isLoggedIn;
         }
 
@@ -762,7 +959,7 @@
             if (exists) {
                 return "That email is already registered.";
             }
-            users.push({ fullname: formatTitle(fullname), email: email.toLowerCase(), password: password });
+            users.push({ fullname: formatTitle(fullname), email: email.toLowerCase(), password: password, role: "user" });
             return "";
         }
 
@@ -778,12 +975,39 @@
             return true;
         }
 
+        // Profile management: change name and (optionally) password
+        function updateProfile(fullname, newPassword) {
+            if (newPassword !== "" && newPassword.length < MIN_PASSWORD_LENGTH) {
+                return "Password must be at least " + MIN_PASSWORD_LENGTH + " characters.";
+            }
+            let account = users.find(function (u) { return u.email === loggedInUser.email; });
+            if (!account) {
+                return "Account not found.";
+            }
+            account.fullname = formatTitle(fullname);
+            if (newPassword !== "") {
+                account.password = newPassword;
+            }
+            loggedInUser.fullname = account.fullname;
+            return "";
+        }
+
         /* ---------- CONNECT FUNCTIONS TO THE PAGE ---------- */
         document.getElementById("prev-month").addEventListener("click", function () { changeMonth(-1); });
         document.getElementById("next-month").addEventListener("click", function () { changeMonth(1); });
 
+        document.getElementById("search-box").addEventListener("input", function (event) {
+            searchText = event.target.value;
+            refreshPage();
+        });
+
         document.getElementById("category-filter").addEventListener("change", function (event) {
             selectedCategory = event.target.value;
+            refreshPage();
+        });
+
+        document.getElementById("status-filter").addEventListener("change", function (event) {
+            selectedStatus = event.target.value;
             refreshPage();
         });
 
@@ -825,6 +1049,7 @@
                 document.getElementById("login-form").reset();
                 document.getElementById("login-modal-state").checked = false;
                 updateAuthUI();
+                refreshPage();
             } else {
                 showMessage("Wrong email or password. Register first if you are new.", true);
             }
@@ -832,8 +1057,39 @@
 
         document.getElementById("logout-btn").addEventListener("click", function () {
             loggedInUser = null;
+            stopEdit();
             updateAuthUI();
+            refreshPage();
             showMessage("You have been signed out.", false);
+        });
+
+        // Fill the profile form with the current user's data when it opens
+        document.getElementById("profile-btn").addEventListener("click", function () {
+            document.getElementById("prof-email").value = loggedInUser.email;
+            document.getElementById("prof-role").value = loggedInUser.role;
+            document.getElementById("prof-name").value = loggedInUser.fullname;
+            document.getElementById("prof-pass").value = "";
+        });
+
+        document.getElementById("profile-form").addEventListener("submit", function (event) {
+            event.preventDefault();
+            let error = updateProfile(
+                document.getElementById("prof-name").value,
+                document.getElementById("prof-pass").value
+            );
+            if (error !== "") {
+                showMessage(error, true);
+            } else {
+                showMessage("Profile updated.", false);
+                document.getElementById("profile-modal-state").checked = false;
+                updateAuthUI();
+                refreshPage();
+            }
+        });
+
+        document.getElementById("cancel-edit").addEventListener("click", function () {
+            stopEdit();
+            showMessage("Edit cancelled.", false);
         });
 
         document.getElementById("event-form").addEventListener("submit", function (event) {
@@ -854,15 +1110,25 @@
             } else if (!isValidPrice(price)) {
                 showMessage("Price must be a number of 0 or more.", true);
             } else {
-                addEvent(title, date, category, price);
+                if (editingId !== null) {
+                    let target = events.find(function (e) { return e.id === editingId; });
+                    if (!target || !canModify(target)) {
+                        showMessage("You can only edit your own events.", true);
+                        return;
+                    }
+                    updateEvent(editingId, title, date, category, price);
+                    showMessage("Event updated.", false);
+                } else {
+                    addEvent(title, date, category, price);
+                    showMessage(isAdmin() ? "Event added and approved." : "Event added and waiting for approval.", false);
+                }
 
-                // Jump to the month of the new event so the user can see it
+                // Jump to the month of the saved event so the user can see it
                 currentYear = Number(date.slice(0, 4));
                 currentMonth = Number(date.slice(5, 7)) - 1;
                 selectedDate = date;
 
-                showMessage("Event added and waiting for approval.", false);
-                document.getElementById("event-form").reset();
+                stopEdit();
                 refreshPage();
             }
         });
@@ -878,12 +1144,58 @@
             }
 
             let id = Number(event.target.getAttribute("data-id"));
-            if (action === "delete") {
-                deleteEvent(id);
-                showMessage("Event deleted.", false);
-            } else if (action === "toggle") {
+            let target = events.find(function (e) { return e.id === id; });
+            if (!target) {
+                return;
+            }
+
+            if (action === "toggle") {
+                if (!isAdmin()) {
+                    showMessage("Only admins can approve events.", true);
+                    return;
+                }
                 toggleStatus(id);
                 showMessage("Event status updated.", false);
+            } else if (!canModify(target)) {
+                showMessage("You can only change your own events.", true);
+                return;
+            } else if (action === "edit") {
+                startEdit(id);
+                showMessage("Editing \"" + target.title + "\". Change the form and press Save Changes.", false);
+                return;
+            } else if (action === "delete") {
+                if (editingId === id) {
+                    stopEdit();
+                }
+                deleteEvent(id);
+                showMessage("Event deleted.", false);
+            }
+            refreshPage();
+        });
+
+        // Admin actions on users
+        document.getElementById("user-table-body").addEventListener("click", function (event) {
+            let action = event.target.getAttribute("data-action");
+            if (action === null || !isAdmin()) {
+                return;
+            }
+            let email = event.target.getAttribute("data-email");
+            if (email === ADMIN_EMAIL || email === loggedInUser.email) {
+                return;
+            }
+
+            if (action === "toggle-role") {
+                let account = users.find(function (u) { return u.email === email; });
+                if (account) {
+                    account.role = account.role === "admin" ? "user" : "admin";
+                    showMessage("Role updated for " + account.fullname + ".", false);
+                }
+            } else if (action === "remove-user") {
+                let index = users.findIndex(function (u) { return u.email === email; });
+                if (index !== -1) {
+                    users.splice(index, 1);
+                    showMessage("User removed.", false);
+                }
             }
             refreshPage();
         });
@@ -893,4 +1205,4 @@
         updateAuthUI();
     </script>
 </body>
-</html> 
+</html>
