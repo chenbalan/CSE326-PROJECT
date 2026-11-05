@@ -539,16 +539,7 @@
     <footer>&copy; 2026 Local Event Calendar</footer>
 
     <script>
-        /* =====================================================
-           UNIT IV: JAVASCRIPT FUNDAMENTALS
-           1. Variables and Constants    2. Data Types
-           3. Operators and Expressions  4. Strings and String Methods
-           5. Numbers and Boolean Values 6. Conditional Statements
-           7. Functions                  8. Scope
-           9. Arrays                     10. Objects
-           ===================================================== */
-
-        /* ---------- 1. VARIABLES AND CONSTANTS ---------- */
+        
         const MIN_PASSWORD_LENGTH = 8;
         const ADMIN_EMAIL = "admin@events.com";
         const MONTH_NAMES = ["January", "February", "March", "April", "May", "June",
@@ -557,22 +548,22 @@
         const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
         let today = new Date();
-        let todayString = "";                    // filled in below
+        let todayString = "";                    
         let currentYear = today.getFullYear();
-        let currentMonth = today.getMonth();     // 0 = January ... 11 = December
+        let currentMonth = today.getMonth();     
         let selectedDate = "";
         let selectedCategory = "All";
         let selectedStatus = "All";
         let searchText = "";
-        let editingId = null;                    // null = adding, number = editing that event
+        let editingId = null;                    
         let nextId = 4;
-        let loggedInUser = null;                 // null = nobody signed in
+        let loggedInUser = null;                 
 
         /* ---------- 2. DATA TYPES ---------- */
-        console.log(typeof currentYear);         // "number"
-        console.log(typeof MONTH_NAMES[0]);      // "string"
-        console.log(typeof loggedInUser);        // "object" (null)
-        console.log(Array.isArray(MONTH_NAMES)); // true
+        console.log(typeof currentYear);         
+        console.log(typeof MONTH_NAMES[0]);      
+        console.log(typeof loggedInUser);        
+        console.log(Array.isArray(MONTH_NAMES)); 
 
         /* ---------- 9 + 10. ARRAYS AND OBJECTS ---------- */
         let events = [
